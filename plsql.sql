@@ -42,3 +42,5 @@ execute FUNCTION generate_w2();
 call add_employee();
 select * from employee;
 select * from w2;
+
+-- testing labs
