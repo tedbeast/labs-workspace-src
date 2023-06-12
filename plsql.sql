@@ -43,4 +43,4 @@ call add_employee();
 select * from employee;
 select * from w2;
 
--- testing labs 5
+-- testing labs 6
