@@ -1,36 +1,45 @@
 
 import java.io.*;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 /**
  * the general service class for managing all lab related file manipulation
  */
 public class LLLabProcessor {
+    String apiURL;
     String labName;
     String zipFileName;
+    String productKey;
     List<String> whitelist;
 
     /**
      * constructor for creating a lab processor specific to a certain lab name
      */
-    public LLLabProcessor(String labName, String zipFileName) throws LLCLIException {
+    public LLLabProcessor(String apiURL, String labName, String productKey, String zipFileName) throws LLCLIException {
         this.labName = labName;
         this.zipFileName = zipFileName;
+        this.apiURL = apiURL;
+        this.productKey = productKey;
         whitelist = new ArrayList<>();
         whitelist.add("LabLoader");
         whitelist.add(".\\.vsc");
         whitelist.add(".\\.idea");
         whitelist.add(".\\.git");
+        whitelist.add(".\\packed.zip");
         whitelist.add(".\\.gitignore");
         whitelist.add(".\\labs.md");
         whitelist.add("labs.properties");
     }
-    public LLLabProcessor(String labName) throws LLCLIException {
-        this(labName, "out.zip");
+    public LLLabProcessor(String apiURL, String labName, String productKey) throws LLCLIException {
+        this(apiURL, labName, productKey, "out.zip");
     }
 
     /**
@@ -58,7 +67,7 @@ public class LLLabProcessor {
     public void loadSavedLabZip() throws LLCLIException {
 
         try (FileOutputStream out = new FileOutputStream(zipFileName)) {
-            LLWebUtil.getSavedZip(labName).transferTo(out);
+            LLWebUtil.getSavedZip(apiURL, labName, productKey).transferTo(out);
         }catch(IOException e){
             throw new LLCLIException("There was some issue loading the lab contents.");
         }
@@ -155,7 +164,62 @@ public class LLLabProcessor {
      * over to API
      * @param currentLab
      */
-    public void sendSaved(String currentLab) {
-        LLWebUtil.sendSavedZip();
+    public void sendSaved()throws LLCLIException {
+        File zip = new File("packed.zip");
+        try{
+        zip = pack();
+        byte[] zipBytes = Files.readAllBytes(Paths.get("packed.zip"));
+        LLWebUtil.sendSavedZip(apiURL, labName, productKey, zipBytes);
+        }catch(IOException e){
+            throw new LLCLIException("There was some issue zipping the workspace.");
+        }finally{
+            if(zip.exists()){
+                zip.delete();
+            }
+        }
+    }
+
+    /**
+     * package the current workspace to zip, excluding whitelist files
+     * @param sourceDirPath
+     * @param zipFilePath
+     * @throws IOException
+     */
+    public File pack() throws IOException {
+        Path p = Files.createFile(Paths.get("./packed.zip"));
+        try (ZipOutputStream zs = new ZipOutputStream(Files.newOutputStream(p))) {
+            Path pp = Paths.get("./");
+            Files.walk(pp)
+                    .filter(path -> !Files.isDirectory(path) && !containedInPath(path))
+                    .forEach(path -> {
+                        ZipEntry zipEntry = new ZipEntry(pp.relativize(path).toString());
+                        try {
+                            zs.putNextEntry(zipEntry);
+                            Files.copy(path, zs);
+                            zs.closeEntry();
+                        } catch (IOException e) {
+                            System.err.println(e);
+                        }
+                    });
+            File zip = new File("packed.zip");
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+        return null; 
+    }
+    /**
+     * check if a current directory file belongs in the whitelist and should not be zipped
+     * (i guess the whitelist has become a blacklist? idk)
+     * @param path
+     * @return
+     */
+    public boolean containedInPath(Path path){
+        for(int i = 0; i < whitelist.size(); i++){
+            System.out.println("PATH: "+path.toString() + "WHITELISTED: "+whitelist.get(i));
+            if(path.toString().contains(whitelist.get(i))){
+                return true;
+            }
+        }
+        return false;
     }
 }

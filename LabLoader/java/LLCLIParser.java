@@ -18,19 +18,19 @@ public class LLCLIParser {
         try {
             if (command.length < 1 || command[0].equals("info") || command[0].equals("help")) {
             } else if (command[0].equals("save")) {
-                LLLabProcessor labProcessor = new LLLabProcessor(propsService.getCurrentLab());
-                labProcessor.sendSaved(propsService.getCurrentLab());
+                LLLabProcessor labProcessor = new LLLabProcessor(propsService.getApiUrl(), propsService.getCurrentLab(), propsService.getProductKey());
+                labProcessor.sendSaved();
                 System.out.println("save functionality not done yet - sorry");
             } else if (command[0].equals("open")) {
                 if (command.length < 2) {
                     throw new LLCLIException("Your second argument must include the lab name.");
                 }
-                LLLabProcessor labProcessor = new LLLabProcessor(command[1]);
-                labProcessor.sendSaved(propsService.getCurrentLab());
+                LLLabProcessor labProcessor = new LLLabProcessor(propsService.getApiUrl(), command[1], propsService.getProductKey());
+                labProcessor.sendSaved();
                 labProcessor.processSaved();
             }else if (command[0].equals("reset")) {
-                LLLabProcessor labProcessor = new LLLabProcessor(propsService.getCurrentLab());
-                LLWebUtil.sendResetRequest();
+                LLLabProcessor labProcessor = new LLLabProcessor(propsService.getApiUrl(), propsService.getCurrentLab(), propsService.getProductKey());
+                LLWebUtil.sendResetRequest(propsService.getApiUrl(), propsService.getCurrentLab(), propsService.getApiUrl());
                 labProcessor.processSaved();
             }
         }catch(LLCLIException e){
